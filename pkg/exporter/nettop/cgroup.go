@@ -12,7 +12,8 @@ import (
 )
 
 var (
-	cgroupRoot = ""
+	cgroupRoot   = ""
+	cgroupV2Mode = false
 )
 
 func init() {
@@ -22,6 +23,13 @@ func init() {
 		return
 	}
 	cgroupRoot = root
+	cgroupV2Mode = isCgroupV2()
+}
+
+// isCgroupV2 checks if system is using cgroup v2
+func isCgroupV2() bool {
+	_, err := os.Stat("/sys/fs/cgroup/cgroup.controllers")
+	return err == nil
 }
 
 func lookupCgroupRoot() (string, error) {
@@ -36,14 +44,25 @@ func tasksInsidePodCgroup(path string, absolutePath bool) []int {
 	}
 	base := path
 	if !absolutePath {
-		base = filepath.Join(cgroupRoot, "memory", path)
+		if cgroupV2Mode {
+			base = filepath.Join(cgroupRoot, path)
+		} else {
+			base = filepath.Join(cgroupRoot, "memory", path)
+		}
 	}
+
+	// Determine the tasks file name based on cgroup version
+	tasksFileName := "tasks"
+	if cgroupV2Mode {
+		tasksFileName = "cgroup.threads"
+	}
+
 	m := make(map[int]int)
 	err := filepath.Walk(base, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && strings.HasSuffix(path, "/tasks") {
+		if !info.IsDir() && strings.HasSuffix(path, "/"+tasksFileName) {
 			tasks, err := os.ReadFile(path)
 			if err != nil {
 				return fmt.Errorf("failed read cgroup tasks %s: %w", path, err)
