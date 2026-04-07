@@ -101,7 +101,14 @@ func (c *collectCache) get() (map[string]map[uint32]uint64, error) {
 		if len(ets) == 0 {
 			log.Infof("failed collect tcp summary, no entity found")
 		}
-		c.result = collect(ets)
+
+		sockDiagOnce.Do(probeSockDiagSupport)
+		if useSockDiag {
+			c.result = collectSockDiag(ets)
+		} else {
+			log.Debugf("sock_diag unavailable (%v), using proc", useSockDiagErr)
+			c.result = collect(ets)
+		}
 		c.last = time.Now()
 	}
 
