@@ -536,8 +536,8 @@ func ruleCollector(sandboxInfo *netstack.NetNSInfo) error {
 			Priority: rule.Priority,
 			Family:   rule.Family,
 			Table:    rule.Table,
-			Mark:     rule.Mark,
-			Mask:     rule.Mask,
+			Mark:     int(rule.Mark),
+			Mask:     int(derefUint32(rule.Mask)),
 			Tos:      rule.Tos,
 			TunID:    rule.TunID,
 			Goto:     rule.Goto,
@@ -549,6 +549,13 @@ func ruleCollector(sandboxInfo *netstack.NetNSInfo) error {
 		})
 	}
 	return nil
+}
+
+func derefUint32(p *uint32) uint32 {
+	if p == nil {
+		return 0
+	}
+	return *p
 }
 
 func iptablesCollector(sandboxInfo *netstack.NetNSInfo) error {
