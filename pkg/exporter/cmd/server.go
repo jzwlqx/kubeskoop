@@ -74,6 +74,12 @@ var (
 
 			defer nettop.StopCache()
 
+			if err = nettop.StartLinkManager(); err != nil {
+				log.Errorf("failed start link manager: %v", err)
+				return
+			}
+			defer nettop.StopLinkManager()
+
 			if cfg.EnableController {
 				if cfg.ControllerAddr == "" {
 					log.Infof("controller address is empty, use dns:controller:10263 as default")
