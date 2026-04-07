@@ -42,11 +42,11 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.10.0
 	github.com/ti-mo/conntrack v0.4.0
 	github.com/ti-mo/netfilter v0.5.0
-	github.com/vishvananda/netlink v1.2.1-beta.2
-	github.com/vishvananda/netns v0.0.4
+	github.com/vishvananda/netlink v1.3.2-0.20260404173425-c822ed716ea1
+	github.com/vishvananda/netns v0.0.5
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
 	golang.org/x/sync v0.11.0
 	golang.org/x/sys v0.30.0
@@ -171,7 +171,7 @@ require (
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20201008174630-78d3cae3a980 // indirect
-	github.com/stretchr/objx v0.5.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tchap/go-patricia v2.2.6+incompatible // indirect
 	github.com/tetratelabs/wazero v1.9.0 // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
@@ -210,5 +210,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/vishvananda/netlink v1.2.1-beta.2 => github.com/bswang/netlink v1.0.1-0.20240423021740-86cd4b5bb65d
