@@ -153,7 +153,7 @@ func BenchmarkParseStAndQueues(b *testing.B) {
 	line := "   0: 0100007F:1F90 0100007F:CEA4 01 00000100:00000200 00:00000000 00000000  1000        0 54321 1 0000000000000000 100 0 0 10 0"
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		parseStAndQueues(line)
+		_, _, _, _ = parseStAndQueues(line)
 	}
 }
 
@@ -166,11 +166,13 @@ func BenchmarkCollectTCPSummary(b *testing.B) {
 	}
 	dir := b.TempDir()
 	path := filepath.Join(dir, "tcp")
-	os.WriteFile(path, lines, 0644)
+	if err := os.WriteFile(path, lines, 0644); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		collectTCPSummary(path)
+		_, _ = collectTCPSummary(path)
 	}
 }
