@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net"
 	"strings"
 	"syscall"
 
@@ -127,6 +126,22 @@ func getQdiscStats(entity *nettop.Entity) ([]QdiscInfo, error) {
 	}
 	defer c.Close()
 
+	// Build interface index -> name map for this namespace.
+	var ifaceMap map[int]string
+	if entity.IsHostNetwork() {
+		allLinks := nettop.GetAllLinks()
+		ifaceMap = make(map[int]string, len(allLinks))
+		for _, l := range allLinks {
+			ifaceMap[l.Index] = l.Name
+		}
+	} else {
+		ifaceMap, err = getInterfaceMap(c)
+		if err != nil {
+			log.Warnf("%s failed get interface map for netns %d: %v", probeName, entity.GetNetns(), err)
+			ifaceMap = make(map[int]string)
+		}
+	}
+
 	req := netlink.Message{
 		Header: netlink.Header{
 			Flags: netlink.Request | netlink.Dump,
@@ -142,7 +157,7 @@ func getQdiscStats(entity *nettop.Entity) ([]QdiscInfo, error) {
 
 	res := []QdiscInfo{}
 	for _, msg := range msgs {
-		m, err := parseMessage(msg)
+		m, err := parseMessage(msg, ifaceMap)
 		if err != nil {
 			log.Errorf("failed parse qdisc msg, nlmsg: %v, err: %v", msg, err)
 			continue
@@ -151,6 +166,42 @@ func getQdiscStats(entity *nettop.Entity) ([]QdiscInfo, error) {
 	}
 
 	return res, nil
+}
+
+// getInterfaceMap queries RTM_GETLINK on an existing netlink connection
+// and returns a map of interface index to interface name.
+func getInterfaceMap(c *netlink.Conn) (map[int]string, error) {
+	req := netlink.Message{
+		Header: netlink.Header{
+			Flags: netlink.Request | netlink.Dump,
+			Type:  18, // RTM_GETLINK
+		},
+		Data: make([]byte, 16), // struct ifinfomsg
+	}
+
+	msgs, err := c.Execute(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute RTM_GETLINK request: %v", err)
+	}
+
+	ifaceMap := make(map[int]string, len(msgs))
+	for _, msg := range msgs {
+		if len(msg.Data) < 16 {
+			continue
+		}
+		ifaceIdx := int(nlenc.Uint32(msg.Data[4:8]))
+		attrs, err := netlink.UnmarshalAttributes(msg.Data[16:])
+		if err != nil {
+			continue
+		}
+		for _, attr := range attrs {
+			if attr.Type == 3 { // IFLA_IFNAME
+				ifaceMap[ifaceIdx] = nlenc.String(attr.Data)
+				break
+			}
+		}
+	}
+	return ifaceMap, nil
 }
 
 func getConn(nsfd int) (*netlink.Conn, error) {
@@ -296,7 +347,7 @@ func parseTCFqQdStats(attr netlink.Attribute) (TCFqQdStats, error) {
 }
 
 // See https://tools.ietf.org/html/rfc3549#section-3.1.3
-func parseMessage(msg netlink.Message) (QdiscInfo, error) {
+func parseMessage(msg netlink.Message, ifaceMap map[int]string) (QdiscInfo, error) {
 	var m QdiscInfo
 	var s TCStats
 	var s2 TCStats2
@@ -376,11 +427,7 @@ func parseMessage(msg netlink.Message) (QdiscInfo, error) {
 		}
 	}
 
-	iface, err := net.InterfaceByIndex(int(ifaceIdx))
+	m.IfaceName = ifaceMap[int(ifaceIdx)]
 
-	if err == nil {
-		m.IfaceName = iface.Name
-	}
-
-	return m, err
+	return m, nil
 }
